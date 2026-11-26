@@ -49,7 +49,8 @@ export function endingKind(text) {
 // `git show <ref>:<path>` reads the path from the repo root, so a path given from the cwd (absolute, `./x`, backslashes, from a
 // subfolder) is first made repo-root-relative with forward slashes.
 export function repoRelative(file, cwd = process.cwd(), top = execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd, encoding: 'utf8' }).trim()) {
-  return relative(top, resolve(cwd, file)).replace(/\\/g, '/');
+  // Backslashes first: on Linux `..\y.md` would otherwise be one file name, not a parent path.
+  return relative(top, resolve(cwd, file.replace(/\\/g, '/'))).replace(/\\/g, '/');
 }
 
 export const OUTSIDE_REPO = 'outside the repo';
