@@ -1092,7 +1092,8 @@ test('Slice 29 item 46: the default marker names the repo from origin and writes
   const marker = JSON.parse(fs.readFileSync(file, 'utf8'));
   assert.equal(marker.repo, 'o/r');
   assert.equal(marker.sha, 'f'.repeat(40));
-  assert.equal(fs.realpathSync(marker.root), fs.realpathSync(repo));
+  // .native expands 8.3 short names (C:\Users\RUNNER~1) that the JS realpath keeps on Windows runners.
+  assert.equal(fs.realpathSync.native(marker.root), fs.realpathSync.native(repo));
 });
 
 // Slice 17 part B: a suite summary must be of the PR head's code.
