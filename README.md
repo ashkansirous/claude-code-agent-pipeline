@@ -2,7 +2,7 @@
 
 A multi-agent software delivery pipeline built on [Claude Code](https://claude.com/claude-code): skills, model-pinned subagents and guardrail hooks that plan, build, review, test and ship code, in parallel and unattended overnight.
 
-I built and run it to maintain my own products alone: [Read The Stupid Text](https://github.com/ashkansirous/ReadTheStupidText) and Dino (a kids' book reader), live on Google Play, the App Store and the Microsoft Store. Since the wave runner went in on 19 October 2026, 1,201 pull requests have been merged into that repo. Progress is reported to [agent-progress-board](https://github.com/ashkansirous/agent-progress-board), a Cloudflare Worker + D1 app with a remote MCP server, also open source.
+I built and run it to maintain my own products alone: [Read The Stupid Text](https://github.com/ashkansirous/ReadTheStupidText) and Dino (a kids' book reader), live on Google Play, the App Store and the Microsoft Store. Since the wave runner went in on 19 October 2026, more than 1,200 pull requests have been merged into that repo. Progress is reported to [agent-progress-board](https://github.com/ashkansirous/agent-progress-board), a Cloudflare Worker + D1 app with a remote MCP server, also open source.
 
 This repo is a cleaned copy of my private config: the parts that make up the pipeline, without my personal skills. Rules and hook comments cite the incident that caused them (date, repo, what went wrong), so you can see why each one exists.
 
