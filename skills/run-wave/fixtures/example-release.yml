@@ -1,0 +1,192 @@
+name: Release
+
+# The one entry point for every push to main (Slice 30, plan.md). Decides
+# what this push ships, tags it, then calls only the platform workflows that
+# need a new build:
+#
+# - Every native shell loads the live site, so src/, worker/ and shared/
+#   changes reach every app without a native build. A platform builds only
+#   when its own shell files change (.github/scripts/ship-targets.mjs).
+# - A major version bump (`+semver: major`, `feat!:`, `BREAKING CHANGE:`)
+#   builds and publishes every platform — the "ship everything, in case
+#   something was missed" release.
+#
+# The web app itself deploys through Cloudflare Workers Builds, not here
+# (docs/DEPLOYING.md); its build watch paths keep it to web changes. A major
+# release that touches no web file redeploys the site through a deploy hook.
+#
+# Tagging used to live in version-tag.yml and race android.yml to create the
+# tag. It now runs before any platform build, so the tag always exists by the
+# time a publish script looks for it.
+
+on:
+  push:
+    branches:
+      - main
+
+# One release at a time, so two quick pushes can't both compute and tag the
+# same version. A queued run that GitHub cancels in favour of a newer one
+# loses nothing: ship-targets.mjs and `--bump` measure from the last version
+# tag, so the newer run covers the cancelled push's changes too.
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      android: ${{ steps.targets.outputs.android }}
+      ios: ${{ steps.targets.outputs.ios }}
+      linux: ${{ steps.targets.outputs.linux }}
+      windows: ${{ steps.targets.outputs.windows }}
+      redeploy-web: ${{ steps.targets.outputs.redeployWeb }}
+      ship: ${{ steps.targets.outputs.ship }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # compute-version.mjs and ship-targets.mjs both measure from the
+          # last version tag, so they need full history and tags.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Release script tests
+        # Also run on PRs by release-scripts.yml; repeated here so a broken
+        # script can never decide a release.
+        run: node --test .github/scripts/ship-targets.test.mjs .github/scripts/release-notes.test.mjs .github/scripts/carry-linux-build.test.mjs
+
+      - name: Pending version bump
+        # Assigned first, not inlined into the echo: a failed command
+        # substitution inside an argument wouldn't fail the step, and an empty
+        # bump would silently skip a major release's other platforms.
+        id: bump
+        run: |
+          BUMP=$(node scripts/compute-version.mjs --bump)
+          case "$BUMP" in
+            major|minor|patch|none) echo "bump=$BUMP" >> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::compute-version --bump printed '$BUMP'"; exit 1 ;;
+          esac
+
+      - name: Decide what ships
+        id: targets
+        env:
+          BUMP: ${{ steps.bump.outputs.bump }}
+          # Only for the site: Cloudflare's watch paths see just this push.
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: node .github/scripts/ship-targets.mjs
+
+      - name: Compute version
+        # A push that ships nothing (docs only) gets no tag. Its commits are
+        # still counted by the next push that does ship.
+        if: ${{ steps.targets.outputs.ship == 'true' }}
+        id: version
+        run: |
+          node scripts/compute-version.mjs
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Tag if new
+        if: ${{ steps.targets.outputs.ship == 'true' }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          git fetch --tags --force origin
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists — nothing to do"
+          elif git tag "$TAG" && git push origin "$TAG"; then
+            echo "Tagged $TAG"
+          elif git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null; then
+            echo "::warning::$TAG was created elsewhere while this ran — leaving it."
+          else
+            exit 1
+          fi
+
+  android:
+    needs: plan
+    if: ${{ needs.plan.outputs.android == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/android.yml
+    secrets: inherit
+
+  linux:
+    needs: plan
+    if: ${{ needs.plan.outputs.linux == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/linux-appimage.yml
+    secrets: inherit
+
+  ios:
+    needs: plan
+    if: ${{ needs.plan.outputs.ios == 'true' }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/ios.yml
+    secrets: inherit
+
+  windows:
+    needs: plan
+    if: ${{ needs.plan.outputs.windows == 'true' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/windows-installer.yml
+    secrets: inherit
+
+  redeploy-web:
+    needs: plan
+    if: ${{ needs.plan.outputs.redeploy-web == 'true' }}
+    runs-on: ubuntu-latest
+    permissions: {}
+    # `secrets` can't be read in a step's `if:` (CLAUDE.md's *CI gotchas*).
+    env:
+      HAS_DEPLOY_HOOK: ${{ secrets.CF_DEPLOY_HOOK_URL != '' }}
+    steps:
+      - name: Trigger a Workers Builds deploy
+        # The hook URL is itself the credential, so it lives only in secrets.
+        if: ${{ env.HAS_DEPLOY_HOOK == 'true' }}
+        env:
+          CF_DEPLOY_HOOK_URL: ${{ secrets.CF_DEPLOY_HOOK_URL }}
+        run: curl --fail --silent --show-error -X POST "$CF_DEPLOY_HOOK_URL"
+
+      - name: Report a missing deploy hook
+        # Unconfigured must never look like done: say the site wasn't redeployed.
+        if: ${{ env.HAS_DEPLOY_HOOK != 'true' }}
+        run: echo "::warning::CF_DEPLOY_HOOK_URL isn't set, so this major release didn't redeploy the site (docs/DEPLOYING.md)."
+
+  notes:
+    needs: [plan, android, linux, windows, ios]
+    # Runs when any platform job ran, even if another failed, so the notes
+    # still describe whatever did publish.
+    if: ${{ !cancelled() && needs.plan.result == 'success' && (needs.android.result != 'skipped' || needs.linux.result != 'skipped' || needs.windows.result != 'skipped' || needs.ios.result != 'skipped') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Write which platforms this release holds
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.plan.outputs.version }}
+          IOS_SHIPPED: ${{ needs.ios.outputs.uploaded == 'true' }}
+        run: node .github/scripts/release-notes.mjs
+
+      - name: Carry the Linux update manifest into a release that built no Linux
+        # The installed Linux app reads latest-linux.yml from the newest
+        # Release (Slice 29g); without this, an Android-only release would
+        # break its update check until the next Linux build.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.plan.outputs.version }}
+        run: node .github/scripts/carry-linux-build.mjs

@@ -1,0 +1,20 @@
+{
+  "agent": "run-wave",
+  "sharedTouch": [".xaml", ".razor"],
+  "steps": [
+    { "label": "Claim with a draft PR", "process": "slice/claim" },
+    { "label": "Build the slice", "process": "wave/build" },
+    { "label": "Fast checks", "process": "wave/fast-checks" },
+    { "label": "Review pass 1 (high)", "process": "wave/review-1" },
+    { "label": "Fix pass 1 findings", "process": "wave/fix-1" },
+    { "label": "Review pass 2 (medium)", "process": "wave/review-2" },
+    { "label": "Fix pass 2 findings", "process": "wave/fix-2" },
+    { "label": "Android emulator check", "process": "wave/device-android", "needsTouch": ["android", ".kt", "maestro"], "note": "Only when the slice touches Android code" },
+    { "label": "iOS check", "process": "wave/device-ios", "needsTouch": ["ios", ".swift"], "note": "Only when the slice touches iOS code" },
+    { "label": "Windows desktop check", "process": "wave/device-windows", "needsTouch": ["windows", "desktop", ".xaml"], "note": "Only when the slice touches Windows code" },
+    { "label": "Run checks", "process": "wave/run-checks" },
+    { "label": "Record the slice in its docs", "process": "docs/slice" },
+    { "label": "Ship and merge", "process": "ship/merge" },
+    { "label": "Index pass", "process": "docs/index" }
+  ]
+}

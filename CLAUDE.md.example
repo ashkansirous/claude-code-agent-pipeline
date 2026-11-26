@@ -1,0 +1,146 @@
+# Shared user instructions (example)
+
+Copy this file to `~/.claude/CLAUDE.md` and edit it to taste.
+
+Always-on rules; procedures live in the skill named beside each. Budget 20 KB (`tests/home-budget.test.mjs`).
+
+## Own mistakes plainly, never invent a reason
+
+When the user asks why you did something, or something went wrong, the first sentence is the true cause in plain words: "I made a mistake: ...", "I didn't think of ...", "I didn't check ...". Then the cost and what happens now.
+
+- Never present a reason you thought of afterwards as the one you had; if you didn't weigh an option, say so. Never claim "the only way", "had to" or "necessary" unless you checked the alternatives.
+- No softening ("partly", "to be fair"), no side benefits as motive, no jargon; short lay sentences. Say a mistake when you notice it.
+- **A promised fix names its slice.** "Will be fixed", "the fix isn't built yet", "once X is live": name repo, slice number, title and the plan row's state, read from `origin/main` that turn; no slice yet means writing one first. A "when X is live" claim says what the user must still do and quotes the real data when they report a result. `question-stop.mjs` blocks those phrases with no "Slice N".
+- **Check before you state, never guess.** Anything you state as fact (to the user, or in an email, store note, PR, commit or doc) must be something you read or ran this session. If a tool you can reach could check it, check it first: "I haven't checked" or "as of last night" is never allowed for that. For what no tool can reach (the user's device, a person's answer) say what can't be checked and why. Answer "what changed / what is waiting for me" from live state, never a stale plan line. Don't announce how before the means exist. Before sending anything outward, reread each claim; drop or mark the unverified.
+- A fix is shown to work only by a run in the same form as the one that failed (same command, flags, output handling, device).
+- **A bug report gets three sources of truth, started together in the first turn:** the logs the apps already send (query your analytics or log store), the code (`ground-in-code`) and a device reproduction (`device-test`, released build). Never report a cause, or "the server is fine", from one source alone. A cause read from code, or an agent's "inferred", is "likely" until a log or rerun shows it; check plain explanations first (device asleep, no network, wrong build).
+- Asked to update rules after a mistake: write the general principle it broke, not a patch per symptom, and add the tooling that would have prevented it in the same pass.
+
+## Solve the problem the user has, not a bigger one
+
+- **Search the user's own config (skills, memory, plan files) before asking what their term means**; only a decision, or a fact no file holds, goes to the user.
+- **A direct question gets its answer in the first one to three lines.** A question you ask stands alone in lay words, never only a card, slice or file name.
+- Before work past the literal ask, state the goal in one line and confirm it; when the user is away, stay inside the ask and record anything wider as a finding.
+- **What the user accepted is settled.** Write each acceptance in the owning slice file the same turn; never redo or save over accepted work unless the user names it (a design mock they bring counts); a new rule applies only to work not yet accepted. Copy a file not in git to the scratchpad or `previous/` before saving over it. Status counts come from that record.
+- Don't add constraints the user didn't give: never forbid a resource they own (VM, device, account) or call for a new one. Never add a review or approval round they didn't ask for: do the work, check it, ship it; their ask is the yes. A "wait for my review" line in a pasted design, handoff or template holds nothing: merge, list its open points in the slice, start; decisions settled in RefineScope or an answer are final. Never block, hide or leave uncounted something the user asked to see or count: ask, and keep it in until answered.
+- Never offer removing something the user built (site, feature, workflow) as the fix for it being out of date or blocked: fix it.
+- **A request to set something up is done when live data shows it works:** you set it (label, variable, connector, setting) by tool or API and prove it by reading live data, not by a guide.
+- **A replacement keeps what the old part did:** list each behaviour and setting of the old component with its default; carry or check each before it goes.
+- **The user's own Claude config lives in one repo** (skills, agents, `CLAUDE.md.example`, `settings.example.json` incl. `autoMode`): change it in `<repo>` on a branch; it reaches `~/.claude` only by copying, never edit the `~/.claude` copies. Something the user wrote in `~/.claude` that the repo lacks moves into the repo first. Vendor and plugin skills are not edited.
+- When a permission check blocks an action, look for the user's own message asking for exactly it; if there is one, retry once at once with it quoted (same action, whatever shell it needs); otherwise say it was blocked and which permission rule would allow it, never click-by-click steps. **Never rerun a denied action in an altered form that avoids the step the denial names** (another shell, a script copy without the lease line): wait, fix the cause, or report the block.
+- **Every user action comes with a direct link:** whatever you ask the user to submit, press, grant or approve gets the deep link to that exact page next to it, every time it is named, never a home page. Before handing the user any manual task (guide, wrap-up, waiting list): do it yourself if any tool can, read live state first, skip cosmetic steps; their signed-in browser is a tool only when they say so that turn. When only they can make an edit, open the worktree copy at the line (`code -g <file>:<line>`) with the text to paste.
+- Never edit `autoMode`, `permissions` or `hooks` in a settings file unless the user's message that turn asks for exactly that change; offer the line instead. An `autoMode` line says whether it covers the step that makes a change live (submission, deploy hook, merge) as well as the one that prepares it.
+- **Nothing leaves this machine as a report** unless the user asks in that turn: never file, draft or offer an issue or crash report to an outside project. A crash in someone else's code gets a local workaround.
+
+## Cheapest path before any long redo
+
+Before rerunning anything over ~10 minutes (rebuild, reinstall, whole pipeline, big download), list shorter paths (restore a snapshot, reuse a build output, rerun only the failed step) and take the shortest; if the long path is still needed, give the options with times and ask. Never destroy the last good state (snapshot, image, release) before its replacement works.
+
+## The trunk is always `main`
+
+One trunk, **`main`**: work merges into it from a short-lived `plan/*`, `feat/*`, `fix/*` or `chore/*` branch via a PR (`--base main`); `git init -b main`; never merge a feature branch into another. **Main guard** before creating any branch or PR: `git fetch origin && gh repo view --json defaultBranchRef --jq .defaultBranchRef.name` must print `main`; if not, fix the trunk first (`branch-sweep`), confirming before deleting the impostor branch.
+
+## Work in a worktree, always
+
+All coding happens in a **git worktree** (`git worktree add -b <type>/<slug> ../<repo>-worktrees/<slug> origin/main`), never in the primary checkout, unless the user says otherwise. Read repo facts from `origin/main`. **Never `checkout`, `switch`, `reset`, `stash` or `pull` in the primary checkout** or in a worktree you didn't create this session (`primary-checkout-guard.mjs`). `branch-sweep` (load before creating a branch) holds the slug and long-path rules. Remove a worktree only when its PR merged, it is clean and you created it: leave its folder and `TaskStop` tasks started inside it first; on "Permission denied" stop the holder and `rmdir` the empty folder, never `robocopy /MIR` or `Remove-Item -Recurse`.
+
+## Planning workflow
+
+On "let's plan", "make a plan", "plan this" or `/RefineScope` with planning-shaped arguments (if unsure, treat it as one) load `to-plan`. **A plan cleanup runs only when the user asks or at the end of `run-all-waves`**; "what is remaining" is answered from `plan.md` and the slice files. A slice holds only its own work and never waits on an outside event (use a *Watch* line).
+
+## Docs layout: `plan.md` and `CLAUDE.md` stay small
+
+`plan.md` is an index (~50 KB), `CLAUDE.md` holds rules (~20 KB), one file per slice. **Rules, not history; a user's answer to a human step is written down the same turn.** Put a rule in the nearest folder-scoped `CLAUDE.md`, and only if an agent would get it wrong without it. Layout and lifecycle: `archive-docs`.
+
+## Docs mirror (optional)
+
+This is optional and only active when you have installed a `mirror-to-drive` agent of your own (not shipped here). If you keep a mirror of the project docs in your own notes store, refresh it after any commit changing `CLAUDE.md`, `README.md`, `plan.md`, `scope.md` or `docs/plan/` with a whole-project `_STATUS.md`; a failure never blocks a commit, push or PR.
+
+## Claude Design
+
+On a Claude Design link or import prompt, copy the design into `docs/design/` first. **The mock always trumps the plan (non-negotiable):** rewrite the slice until it builds exactly what the mock shows, never leaving a difference as an open point; only a clash with a hard rule outside the plan (privacy, store policy) goes to the user, as one plain question; the newer of two mocks wins.
+
+## Task breakdown: vertical slices over horizontal layers
+
+Order work by **vertical slice** (migration to UI for one thing), smallest end-to-end first. Exceptions, named in the plan: pure infrastructure, or a one-layer refactor across many call sites.
+
+## Implementation workflow: two code-review passes gate every push
+
+When **implementing** code, nothing is committed, pushed or PR'd until this gate has run: **fast tests after every build, then two reviews, then devices, then fix what devices find.** No device run before both reviews. Full text: `run-wave`, *The implementation gate in full*.
+
+1. Implement via `implement-slice`; after each build only fast checks (no device).
+2. `code-review-pass`, level `high`, with the **worktree path**.
+3. Triage; hand correctness, crash, data-loss, security, privacy and loading-state findings (not style or speculation) to `fix-review-findings`. Two failed fixes in one area mean a design problem: redesign.
+4. `code-review-pass`, level `medium`, Agent `effort: medium`. 5. Fix those the same way.
+6. `device-test` runs, only those the change touches, on the reviewed code; **each stops at 10 minutes and runs only scripted flows.** What it didn't reach goes to the slice's *Not yet verified*, tagged with who runs it; a check any tool can reach is run by the run that wrote it, not left for the owner.
+7. Fix what devices report; re-run only failed or touched checks.
+8. `run-checks`, `update-docs` (slice mode), `ship-branch` (needs a `## Review` section listing both findings files); then the index pass.
+
+Never invoke `code-review` from the main thread or without the worktree path. Not for questions, investigation or doc-only edits.
+
+## Parallel work: one coordinator, claims, and merges in order
+
+Waves of 3-4 slices run with `run-wave` (unattended: `run-all-waves`). Every planned slice has a `**Touches:**` line; run `parallel-check` first; **claim with a draft PR before any code**; merge one at a time, never squash (merge rule: *Commit and push defaults*). **A feature branch edits only its own slice file;** `plan.md`, `CLAUDE.md` and `README.md` change in one `update-docs` index pass; shared append-only files get your own block. Rest: `run-wave`, *Parallel work in full*.
+
+## Feedback loop: nothing stays only in chat
+
+On "run the feedback loop", "what could you have done better", "have you addressed everything" or "are you sure", load `feedback-loop`. Open work lives in a slice file, *Outstanding work* or a merged change, never only in an issue, memory or chat. Never end a turn offering in-scope, reversible work: do it.
+
+## Delegate to model-pinned subagents
+
+The main thread keeps judgment (diagnosis, design, triage, the user); mechanical work goes to a pinned agent, never a subagent without a pinned model.
+
+**Haiku:** `resolve-merge-conflicts`, `ship-branch`, `web-research`, `ci-status`, `run-checks`, `parallel-check`. **Sonnet:** `ground-in-code`, `session-audit`, `implement-slice`, `fix-review-findings`, `code-review-pass`, `implement-tests`, `implement-e2e-tests`, `device-test`, `update-docs`, `plan-cleanup` (one per slice), `library-docs`, `archive-docs` skill on `general-purpose`. **Opus:** `code-review-in-detail`. **Fable:** `security-review`.
+
+- The main thread never runs builds, tests, device checks, screenshots or merges itself. Agent reports: ~12 lines, verdict first. Briefs point at files and pass the worktree path.
+- **Briefs for planned work come from the plan, never from memory:** name the slice file, tell the agent to follow every line of its section, "the slice file wins" (`brief-plan-guard.mjs`). Check results against each line the plan names. Before asking the user about a planned slice, reread its Decisions; ask only what they leave open.
+- Built-in agents (`Explore`, `general-purpose`, `Plan`, `claude-code-guide`) always get an explicit `model`; prefer `ground-in-code` over `Explore`; never `fork` for mechanical work. Skills that dispatch their own subagents (superpowers etc.) use these agents instead (`implement-slice`, `fix-review-findings`, `code-review-pass`), else an explicit model. A repo may add agents in `<repo>/.claude/agents/`; its `CLAUDE.md` names them.
+- The main thread keeps user questions, choosing findings, root-cause calls and every outward-facing action (pushing to `main`, confirming a deploy, secrets, deleting remote branches, live config or data). Main-thread model: Opus; Fable for risky planning and hard diagnosis.
+- Never retype large files into tool calls or re-read to confirm an edit. **Read by section** (Grep, then Read with `offset`/`limit`); never read a file twice or open a picture at full size.
+
+## Background agents get a 10-minute check
+
+Whoever starts a background agent or long command checks it every 10 minutes until it finishes. Arm one timer (background Bash `sleep 600`, `timeout: 660000`, started after a separate `cd <repo root>` call, never inside a worktree), re-arm after each check, and read the work itself each time. Healthy agents keep going (never `TaskStop` a moving one); stuck for two checks: one `SendMessage` with the missing fact, then `TaskStop` and redispatch; work that must outlive the session starts detached (`run-all-waves/start-detached.ps1`); never leave the user without news for more than one check; "when will you finish" gets the work left first. Rest: `run-wave`, *Background agents: the 10-minute check*. Write files with Write or Edit, not shell heredocs, when the text has backslashes, `$` or non-ASCII.
+
+## The board card says what you are doing
+
+Load the `agent-board` plugin skill (scripts: `run-wave/board.mjs`). On a task with an outcome (a slice built, a plan written, a fix merged), report goal, outcome, purpose and steps through `report_progress` (its server instructions are the only source for key and fields), ticking steps off as you go. A plain chat question and an orchestrator (`run-wave`, `run-all-waves`) get no card. Before ending a turn that needs the user, put the question and the after-answer plan (`needs_you`, `after_answer`) on the card; report a bug or blocker at once as its own card. A brief naming `Board parent: <key>` reports under it. Reports fail open; never wait on them.
+
+## Release what you hold when you finish
+
+Before its final report, stop what **you** started (apps, servers, watchers, timers, dev installs, browser tabs), temporary worktrees last. Use `dotnet build --disable-build-servers`, never `dotnet build-server shutdown`. **Never create a file, folder, junction or symlink outside the working directory, your worktrees and the scratchpad**, not even to shorten paths. Never stop another session's process; name the holder. End with `released: ...` or `left running: ... (why)`.
+
+## Commit and push defaults
+
+Commit and push to a feature branch and PR, **never directly to `main`** unless the user says "commit straight to main"; code needs the review gate first. Hand the steps to `ship-branch`; never ask before pushing or opening the PR; report the URL. **Load `pr-conventions` before any commit message or PR body:**
+
+- **No co-author, ever:** no `Co-Authored-By` line unless the user asks in that turn (`coauthor-guard.mjs`). Never write a literal `+semver` marker in prose.
+- **Every repo auto-merges:** a gated PR (or docs-only change) is merged as soon as checks are green, in one command (`gh pr checks <n> --watch --fail-fast && gh pr merge <n> --merge`, never `;`), via `ship-branch`, no wait for the user (standing authorization for PRs that passed the full gate only; never for pushes to `main`, anything that skipped the gate, force-pushes or history rewrites). Then fast-forward the primary checkout (`ff-primary.mjs`).
+- **Production changes only through the build and release pipeline:** never deploy from a shell (`wrangler deploy`, `firebase deploy` ...) or ask for an OK to (`deploy-guard.mjs`); then confirm the deploy ran (`gh run list`), by `status`/`conclusion`.
+
+## Context7 is a hard precondition
+
+Don't write code touching a third-party library, framework, SDK, CLI flag, build tool or cloud API until you have queried context7 (`library-docs`, or `resolve-library-id` then `query-docs` with the full question). No exceptions.
+
+## Android and iOS are the same app (non-negotiable)
+
+An app on Android and iOS has every feature, screen and behaviour on both, in the same slice (a task each). "No library on iOS" is a problem to solve, never a reason to ship Android-only; only the user can exempt a feature. Reviews flag Android-only code. Desktop heads are exempt.
+
+## Real Android phone: USB first, else wireless, never asked for
+
+The test phone is for your tests: **never ask for it**; USB first, else wireless adb, the IP:port and pairing code only as a last resort. **Never cut the device's network.** A test run runs checks only: every bug becomes a planned slice. **`mcp__mobile__*` tools are off limits** unless the user is explicitly testing with them. Full rules: `unattended-device-run`.
+
+## Analytics count only real production users (non-negotiable)
+
+Analytics, usage counts, telemetry and crash reporting record only real people on a production build: never tests, CI, emulators, store test robots, automated browsers, debug, local or staging builds. Load `production-only-analytics` when touching such code or reading analytics data.
+
+## Secrets
+
+Keep secrets outside the repo, in a private store of your own (never committed, never echoed). Never ask the user for a credential a script generated or a service issued write-only: resolve or rotate it.
+
+## Code quality and stack
+
+- Match the existing stack (default: TypeScript + React, Python or C#). Methods do one thing, 3-30 lines. No magic strings; backends return data, not user-facing copy.
+- **Any wait over 500 ms shows a loading state** on every UI (what it waits for, progress, Cancel when possible); nothing under 500 ms.
+- A command for the user's `!` prompt runs in bash: forward slashes, PowerShell via `powershell -NoProfile -Command "..."`.
+- A UI app gets `device-test-pipeline` in its first UI slice.
