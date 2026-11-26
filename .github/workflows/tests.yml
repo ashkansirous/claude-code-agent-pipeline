@@ -1,0 +1,37 @@
+name: tests
+
+# Pull requests only: the merge to main is the code the PR run already tested, and a second run per PR
+# doubles the Actions minutes. Linux minutes cost half of Windows minutes; the Windows-only parts run in
+# tests-windows.yml when their files change.
+on:
+  pull_request:
+    branches: [main]
+    # Later patterns override earlier ones: pure Markdown changes skip the run, but front matter is still checked.
+    paths:
+      - '**'
+      - '!**/*.md'
+      - 'skills/**/SKILL.md'
+      - 'agents/*.md'
+      - 'CLAUDE.md.example'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      # The Windows-only tests (WINDOWS_TESTS in .github/scripts/select-tests.mjs) run in tests-windows.yml.
+      - run: |
+          set -euo pipefail
+          selected=$(node .github/scripts/select-tests.mjs --linux)
+          if [ -z "$selected" ]; then echo "select-tests.mjs --linux listed no tests"; exit 1; fi
+          mapfile -t tests <<< "$selected"
+          node --test "${tests[@]}"
+      - if: ${{ !cancelled() }}
+        run: python -I -m unittest discover -s skills/parallel-check

@@ -1,0 +1,46 @@
+name: tests-windows
+
+# The Windows-only parts (the run-all-waves driver through cmd.exe, start-detached, Windows path handling in the
+# guards) run here, and only when a file they test changes: Windows minutes count double.
+# .github/scripts/select-tests.mjs picks, from the PR's changed files, only the Windows-only tests affected;
+# a new Windows-only test goes in WINDOWS_TESTS there and its files in the paths.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/*.ps1'
+      - 'skills/run-all-waves/**'
+      - 'skills/run-wave/primary-checkout-guard*'
+      - 'skills/run-wave/merge-gate*'
+      - '.github/workflows/**'
+      - '.github/scripts/**'
+      # Markdown-only PRs skip the Windows run: it would start on most PRs and use most of the free counted minutes.
+      # A PR that also changes a non-Markdown file above still runs.
+      - '!**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Run the affected Windows-only tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git -c core.quotepath=false diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
+          selected=$(node .github/scripts/select-tests.mjs --windows "$RUNNER_TEMP/changed.txt")
+          # The paths filter matched, so a file these tests may use changed: when the selector links none
+          # (a dependency found by directory scan or a built path, an empty diff), run them all, never none.
+          if [ -z "$selected" ]; then
+            echo "The selector linked no test to the changes; running every Windows-only test."
+            selected=$(node .github/scripts/select-tests.mjs --windows-all)
+          fi
+          if [ -z "$selected" ]; then echo "No Windows-only test found." >&2; exit 1; fi
+          mapfile -t tests <<< "$selected"
+          node --test "${tests[@]}"

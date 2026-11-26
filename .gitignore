@@ -1,0 +1,22 @@
+# Claude Code local session state
+.claude/*
+# The committed settings.json holds only shared keys; local-only keys go in settings.local.json.
+!.claude/settings.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Backups / temp
+*.bak
+*.tmp
+/tmp/
+
+# Python
+__pycache__/
+*.pyc

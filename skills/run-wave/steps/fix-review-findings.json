@@ -1,0 +1,9 @@
+{
+  "agent": "fix-review-findings",
+  "steps": [
+    { "label": "Read the findings", "process": "fix/read" },
+    { "label": "Apply the findings", "process": "review/fix" },
+    { "label": "Run the fast checks", "process": "tests/changed" },
+    { "label": "Report back", "process": "fix/report" }
+  ]
+}

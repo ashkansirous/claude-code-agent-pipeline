@@ -1,0 +1,12 @@
+{
+  "agent": "device-test",
+  "sharedTouch": [".xaml", ".razor"],
+  "steps": [
+    { "label": "Prepare the device", "process": "device/prepare" },
+    { "label": "Install the build", "process": "device/install" },
+    { "label": "Android emulator checks", "process": "device/run", "needsTouch": ["android", ".kt", "maestro"], "note": "Only when the change touches Android code" },
+    { "label": "iOS checks", "process": "device/run", "needsTouch": ["ios", ".swift"], "note": "Only when the change touches iOS code" },
+    { "label": "Windows desktop checks", "process": "device/run", "needsTouch": ["windows", "desktop", ".xaml"], "note": "Only when the change touches Windows code" },
+    { "label": "Report the results", "process": "device/report" }
+  ]
+}

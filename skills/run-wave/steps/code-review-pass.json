@@ -1,0 +1,8 @@
+{
+  "agent": "code-review-pass",
+  "steps": [
+    { "label": "Read the diff", "process": "review/read" },
+    { "label": "Review the changes", "process": "review/analyse" },
+    { "label": "Write the findings", "process": "review/write" }
+  ]
+}

@@ -1,0 +1,171 @@
+{
+  "permissions": {
+    "ask": [
+      "mcp__mobile"
+    ]
+  },
+  "attribution": {
+    "commit": ""
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_CODE_MODE": "0",
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/run-wave/wave-gate.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/coauthor-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/brief-plan-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/device-test-pipeline/device-test-budget-guard.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/unattended-device-run/phone-network-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/shell-write-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/ps-command-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/deploy-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/parallel-check/push-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/run-wave/merge-gate.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/run-wave/primary-checkout-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/timer-cwd-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/stdin-interpreter-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/worktree-script-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/run-all-waves/start-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/git-help-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/branch-sweep/branch-delete-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/coauthor-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/drive-root-guard.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/run-wave/primary-write-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/drive-root-guard.mjs\""
+          },
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/device-run-edit-guard.mjs\""
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/run-wave/stale-primary-read-warn.mjs\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/feedback-loop/question-stop.mjs\""
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/skills/run-wave/session-sync.mjs\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "viewMode": "focus",
+  "verbose": false,
+  "enabledPlugins": {
+    "agent-board@agent-progress-board": false
+  },
+  "extraKnownMarketplaces": {
+    "agent-progress-board": {
+      "source": {
+        "source": "github",
+        "repo": "ashkansirous/agent-progress-board"
+      }
+    }
+  },
+  "skillOverrides": {
+    "implement-e2e-tests": "name-only",
+    "to-scope": "name-only",
+    "parallel-check": "name-only",
+    "plan-cleanup-check": "name-only",
+    "code-review-in-detail": "name-only"
+  }
+}

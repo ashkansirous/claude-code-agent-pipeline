@@ -1,0 +1,12 @@
+{
+  "agent": "implement-slice",
+  "steps": [
+    { "label": "Read the slice and the code it touches", "process": "slice/read" },
+    { "label": "Build the work items", "process": "slice/implement" },
+    { "label": "Write the tests", "process": "slice/tests" },
+    { "label": "Run the fast checks", "process": "tests/changed" },
+    { "label": "Android build", "process": "build/android", "needsTouch": ["android", ".kt"], "note": "Only when the slice touches Android code" },
+    { "label": "iOS build", "process": "build/ios", "needsTouch": ["ios", ".swift"], "note": "Only when the slice touches iOS code" },
+    { "label": "Report back", "process": "slice/report" }
+  ]
+}
